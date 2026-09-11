@@ -80,9 +80,12 @@ public class CapitalFinder extends Frame implements ActionListener {
 
             String bestCountry = null;
             int bestDistance = Integer.MAX_VALUE;
+            double bestRelativeDistance = Double.MAX_VALUE;
             for (String country : countryToCapital.keySet()) {
                 int distance = levenshtein(query.toLowerCase(), country.toLowerCase());
-                if (distance < bestDistance) {
+                double relativeDistance = (double) distance / Math.max(query.length(), country.length());
+                if (relativeDistance < bestRelativeDistance) {
+                    bestRelativeDistance = relativeDistance;
                     bestDistance = distance;
                     bestCountry = country;
                 }
