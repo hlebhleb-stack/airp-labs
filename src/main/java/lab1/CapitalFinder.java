@@ -1,4 +1,4 @@
-package airp_lab1;
+package lab1;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -79,15 +79,18 @@ public class CapitalFinder extends Frame implements ActionListener {
             }
 
             String bestCountry = null;
+            String bestCapital = null;
             int bestDistance = Integer.MAX_VALUE;
             double bestRelativeDistance = Double.MAX_VALUE;
-            for (String country : countryToCapital.keySet()) {
+            for (Map.Entry<String, String> entry : countryToCapital.entrySet()) {
+                String country = entry.getKey();
                 int distance = levenshtein(query.toLowerCase(), country.toLowerCase());
                 double relativeDistance = (double) distance / Math.max(query.length(), country.length());
                 if (relativeDistance < bestRelativeDistance) {
                     bestRelativeDistance = relativeDistance;
                     bestDistance = distance;
                     bestCountry = country;
+                    bestCapital = entry.getValue();
                 }
             }
 
@@ -96,9 +99,8 @@ public class CapitalFinder extends Frame implements ActionListener {
                 return;
             }
 
-            String capital = countryToCapital.get(bestCountry);
             resultArea.setText("Похоже, вы имели в виду: " + bestCountry
-                    + "\nСтолица: " + capital
+                    + "\nСтолица: " + bestCapital
                     + "\n(отличие от введённого текста: " + bestDistance + " символ(ов))");
         }
     }
