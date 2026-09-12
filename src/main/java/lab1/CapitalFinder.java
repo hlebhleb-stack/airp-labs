@@ -13,6 +13,7 @@ public class CapitalFinder extends Frame implements ActionListener {
     TextArea resultArea = new TextArea();
 
     private final Map<String, String> countryToCapital = new LinkedHashMap<>();
+    private final Map<String, String> countryToDescription = new LinkedHashMap<>();
 
     public CapitalFinder() {
         super("Поиск столицы");
@@ -42,7 +43,7 @@ public class CapitalFinder extends Frame implements ActionListener {
         setLocationRelativeTo(null);
         setVisible(true);
 
-        loadCountries("data/countries.txt");
+        loadCountries("data");
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -52,18 +53,36 @@ public class CapitalFinder extends Frame implements ActionListener {
         });
     }
 
-    private void loadCountries(String path) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
-                String[] parts = line.split(";");
-                if (parts.length != 2) continue;
-                countryToCapital.put(parts[0].trim(), parts[1].trim());
-            }
+    private void loadCountries(String dataDir) {
+        File[] files = new File(dataDir).listFiles((dir, name) -> name.endsWith(".txt"));
+        if (files == null) {
+            resultArea.setText("Не удалось найти папку с данными: " + dataDir);
+            return;
+        }
+        Arrays.sort(files, Comparator.comparing(File::getName));
+
+        for (File file : files) {
+            loadCountryFile(file);
+        }
+    }
+
+    private void loadCountryFile(File file) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String firstLine = reader.readLine();
+            if (firstLine == null || firstLine.trim().isEmpty()) return;
+
+            String[] parts = firstLine.trim().split(";");
+            if (parts.length != 2) return;
+
+            String country = parts[0].trim();
+            String capital = parts[1].trim();
+            String description = reader.readLine();
+            description = description == null ? "" : description.trim();
+
+            countryToCapital.put(country, capital);
+            countryToDescription.put(country, description);
         } catch (IOException e) {
-            resultArea.setText("Ошибка чтения файла: " + e.getMessage());
+            resultArea.setText("Ошибка чтения файла " + file.getName() + ": " + e.getMessage());
         }
     }
 
@@ -99,8 +118,10 @@ public class CapitalFinder extends Frame implements ActionListener {
                 return;
             }
 
+            String description = countryToDescription.getOrDefault(bestCountry, "");
             resultArea.setText("Похоже, вы имели в виду: " + bestCountry
                     + "\nСтолица: " + bestCapital
+                    + "\nОписание: " + description
                     + "\n(отличие от введённого текста: " + bestDistance + " символ(ов))");
         }
     }
