@@ -14,6 +14,7 @@ public class CapitalFinder extends Frame implements ActionListener {
 
     private final Map<String, String> countryToCapital = new LinkedHashMap<>();
     private final Map<String, String> countryToDescription = new LinkedHashMap<>();
+    private final Map<String, String> fileToContent = new LinkedHashMap<>();
 
     public CapitalFinder() {
         super("Поиск столицы");
@@ -68,16 +69,23 @@ public class CapitalFinder extends Frame implements ActionListener {
 
     private void loadCountryFile(File file) {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String firstLine = reader.readLine();
-            if (firstLine == null || firstLine.trim().isEmpty()) return;
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+            fileToContent.put(file.getName(), content.toString());
+
+            String firstLine = content.toString().split("\n", 2)[0];
+            if (firstLine.trim().isEmpty()) return;
 
             String[] parts = firstLine.trim().split(";");
             if (parts.length != 2) return;
 
             String country = parts[0].trim();
             String capital = parts[1].trim();
-            String description = reader.readLine();
-            description = description == null ? "" : description.trim();
+            String[] lines = content.toString().split("\n");
+            String description = lines.length > 1 ? lines[1].trim() : "";
 
             countryToCapital.put(country, capital);
             countryToDescription.put(country, description);
@@ -118,12 +126,67 @@ public class CapitalFinder extends Frame implements ActionListener {
                 return;
             }
 
+            StringBuilder matchesText = new StringBuilder();
+            String bestFileName = null;
+            int bestFileCount = 0;
+            for (Map.Entry<String, String> entry : fileToContent.entrySet()) {
+                int count = countOccurrences(entry.getValue().toLowerCase(), query.toLowerCase());
+                matchesText.append(entry.getKey()).append(" - ").append(count).append("\n");
+                if (bestFileName == null || count > bestFileCount) {
+                    bestFileName = entry.getKey();
+                    bestFileCount = count;
+                }
+            }
+
             String description = countryToDescription.getOrDefault(bestCountry, "");
-            resultArea.setText("Похоже, вы имели в виду: " + bestCountry
+            resultArea.setText(matchesText
+                    + "\nПохоже, вы имели в виду: " + bestCountry
                     + "\nСтолица: " + bestCapital
                     + "\nОписание: " + description
                     + "\n(отличие от введённого текста: " + bestDistance + " символ(ов))");
+
+            if (bestFileCount > 0) {
+                openInBrowser(bestFileName, fileToContent.get(bestFileName));
+            }
         }
+    }
+
+    private void openInBrowser(String title, String content) {
+        try {
+            File htmlFile = File.createTempFile("airp-lab1-", ".html");
+            htmlFile.deleteOnExit();
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(htmlFile), "UTF-8")) {
+                writer.write("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
+                        + "<title>" + title + "</title></head><body><pre>"
+                        + content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        + "</pre></body></html>");
+            }
+
+            String os = System.getProperty("os.name", "").toLowerCase();
+            String path = htmlFile.getAbsolutePath();
+            if (os.contains("mac")) {
+                new ProcessBuilder("open", "-a", "Safari", path).start();
+            } else if (os.contains("win")) {
+                new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", path).start();
+            } else {
+                new ProcessBuilder("xdg-open", path).start();
+            }
+        } catch (IOException e) {
+            resultArea.append("\nНе удалось открыть файл в браузере: " + e.getMessage());
+        }
+    }
+
+    private static final double WORD_MATCH_THRESHOLD = 0.34;
+
+    private int countOccurrences(String text, String word) {
+        int count = 0;
+        for (String candidate : text.split("[^\\p{L}]+")) {
+            if (candidate.isEmpty()) continue;
+            int distance = levenshtein(candidate, word);
+            double relativeDistance = (double) distance / Math.max(candidate.length(), word.length());
+            if (relativeDistance <= WORD_MATCH_THRESHOLD) count++;
+        }
+        return count;
     }
 
     private int levenshtein(String a, String b) {
