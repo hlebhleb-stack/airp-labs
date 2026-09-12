@@ -5,6 +5,14 @@ import java.awt.event.*;
 import java.io.*;
 import java.util.*;
 
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
+
 public class CapitalFinder extends Frame implements ActionListener {
 
     Button exitButton = new Button("Exit");
@@ -12,8 +20,13 @@ public class CapitalFinder extends Frame implements ActionListener {
     Button videoButton = new Button("Video");
     TextField countryField = new TextField();
     TextArea resultArea = new TextArea();
+    JFXPanel videoPanel = new JFXPanel();
 
-    private static final String VIDEO_URL = "https://youtu.be/m6pE8psWJXE";
+    private MediaPlayer mediaPlayer;
+
+    private static final String VIDEO_FILE = "data/video.mp4";
+    private static final int VIDEO_WIDTH = 400;
+    private static final int VIDEO_HEIGHT = 225;
 
     private final Map<String, String> countryToCapital = new LinkedHashMap<>();
     private final Map<String, String> countryToDescription = new LinkedHashMap<>();
@@ -23,7 +36,7 @@ public class CapitalFinder extends Frame implements ActionListener {
         super("Поиск столицы");
         setLayout(null);
         setBackground(new Color(150, 200, 100));
-        setSize(450, 290);
+        setSize(460, 480);
 
         Label label = new Label("Введите название государства:");
         label.setBounds(20, 30, 300, 20);
@@ -47,6 +60,9 @@ public class CapitalFinder extends Frame implements ActionListener {
         videoButton.setBounds(240, 80, 100, 25);
         videoButton.addActionListener(this);
         add(videoButton);
+
+        videoPanel.setBounds(20, 230, VIDEO_WIDTH, VIDEO_HEIGHT);
+        add(videoPanel);
 
         setLocationRelativeTo(null);
         setVisible(true);
@@ -106,7 +122,7 @@ public class CapitalFinder extends Frame implements ActionListener {
         if (ae.getSource() == exitButton) {
             System.exit(0);
         } else if (ae.getSource() == videoButton) {
-            openInSystemPlayer(VIDEO_URL);
+            togglePlayback();
         } else if (ae.getSource() == searchButton) {
             String query = countryField.getText().trim();
             if (query.isEmpty()) {
@@ -185,18 +201,32 @@ public class CapitalFinder extends Frame implements ActionListener {
         }
     }
 
-    private void openInSystemPlayer(String url) {
-        try {
-            String os = System.getProperty("os.name", "").toLowerCase();
-            if (os.contains("mac")) {
-                new ProcessBuilder("open", url).start();
-            } else if (os.contains("win")) {
-                new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", url).start();
-            } else {
-                new ProcessBuilder("xdg-open", url).start();
+    private void togglePlayback() {
+        if (mediaPlayer == null) {
+            File videoFile = new File(VIDEO_FILE);
+            if (!videoFile.exists()) {
+                resultArea.setText("Видео не найдено: " + videoFile.getAbsolutePath());
+                return;
             }
-        } catch (IOException e) {
-            resultArea.append("\nНе удалось открыть видео: " + e.getMessage());
+            Platform.runLater(() -> {
+                Media media = new Media(videoFile.toURI().toString());
+                mediaPlayer = new MediaPlayer(media);
+                MediaView mediaView = new MediaView(mediaPlayer);
+                mediaView.setFitWidth(VIDEO_WIDTH);
+                mediaView.setFitHeight(VIDEO_HEIGHT);
+                mediaView.setPreserveRatio(true);
+                StackPane root = new StackPane(mediaView);
+                videoPanel.setScene(new Scene(root, VIDEO_WIDTH, VIDEO_HEIGHT, javafx.scene.paint.Color.BLACK));
+                mediaPlayer.play();
+            });
+        } else {
+            Platform.runLater(() -> {
+                if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
+                    mediaPlayer.pause();
+                } else {
+                    mediaPlayer.play();
+                }
+            });
         }
     }
 

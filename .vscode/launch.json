@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CapitalFinder",
+            "request": "launch",
+            "mainClass": "lab1.CapitalFinder",
+            "vmArgs": "--module-path \"javafx-sdk/javafx-sdk-21.0.4/lib\" --add-modules javafx.controls,javafx.media,javafx.swing"
+        }
+    ]
+}
