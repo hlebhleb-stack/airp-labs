@@ -9,8 +9,11 @@ public class CapitalFinder extends Frame implements ActionListener {
 
     Button exitButton = new Button("Exit");
     Button searchButton = new Button("Search");
+    Button videoButton = new Button("Video");
     TextField countryField = new TextField();
     TextArea resultArea = new TextArea();
+
+    private static final String VIDEO_URL = "https://youtu.be/m6pE8psWJXE";
 
     private final Map<String, String> countryToCapital = new LinkedHashMap<>();
     private final Map<String, String> countryToDescription = new LinkedHashMap<>();
@@ -20,7 +23,7 @@ public class CapitalFinder extends Frame implements ActionListener {
         super("Поиск столицы");
         setLayout(null);
         setBackground(new Color(150, 200, 100));
-        setSize(450, 260);
+        setSize(450, 290);
 
         Label label = new Label("Введите название государства:");
         label.setBounds(20, 30, 300, 20);
@@ -40,6 +43,10 @@ public class CapitalFinder extends Frame implements ActionListener {
         resultArea.setBounds(20, 120, 400, 100);
         resultArea.setEditable(false);
         add(resultArea);
+
+        videoButton.setBounds(240, 80, 100, 25);
+        videoButton.addActionListener(this);
+        add(videoButton);
 
         setLocationRelativeTo(null);
         setVisible(true);
@@ -98,6 +105,8 @@ public class CapitalFinder extends Frame implements ActionListener {
     public void actionPerformed(ActionEvent ae) {
         if (ae.getSource() == exitButton) {
             System.exit(0);
+        } else if (ae.getSource() == videoButton) {
+            openInSystemPlayer(VIDEO_URL);
         } else if (ae.getSource() == searchButton) {
             String query = countryField.getText().trim();
             if (query.isEmpty()) {
@@ -153,7 +162,7 @@ public class CapitalFinder extends Frame implements ActionListener {
 
     private void openInBrowser(String title, String content) {
         try {
-            File htmlFile = File.createTempFile("airp-lab1-", ".html");
+            File htmlFile = File.createTempFile("lab1", ".html");
             htmlFile.deleteOnExit();
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(htmlFile), "UTF-8")) {
                 writer.write("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
@@ -173,6 +182,21 @@ public class CapitalFinder extends Frame implements ActionListener {
             }
         } catch (IOException e) {
             resultArea.append("\nНе удалось открыть файл в браузере: " + e.getMessage());
+        }
+    }
+
+    private void openInSystemPlayer(String url) {
+        try {
+            String os = System.getProperty("os.name", "").toLowerCase();
+            if (os.contains("mac")) {
+                new ProcessBuilder("open", url).start();
+            } else if (os.contains("win")) {
+                new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", url).start();
+            } else {
+                new ProcessBuilder("xdg-open", url).start();
+            }
+        } catch (IOException e) {
+            resultArea.append("\nНе удалось открыть видео: " + e.getMessage());
         }
     }
 
