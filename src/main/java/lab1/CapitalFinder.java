@@ -22,7 +22,7 @@ public class CapitalFinder extends Frame implements ActionListener {
         setSize(450, 260);
 
         Label label = new Label("Введите название государства:");
-        label.setBounds(20, 20, 300, 20);
+        label.setBounds(20, 30, 300, 20);
         add(label);
 
         countryField.setBounds(20, 45, 300, 25);
