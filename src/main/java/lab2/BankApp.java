@@ -1,6 +1,7 @@
 package lab2;
 
 import java.awt.*;
+import java.awt.event.*;
 import java.io.*;
 import java.net.*;
 
@@ -58,12 +59,12 @@ class ClientThread1 extends Thread {
         try {
             Socket s = new Socket("127.0.0.1", 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
-            DataInputStream dis = new DataInputStream(s.getInputStream());
+            BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
             ps.println("ADD_WITHDRAW"); // команда: добавить или снять
             ps.flush();
 
-            String msg = dis.readLine();
+            String msg = br.readLine();
             if (msg != null && msg.startsWith("Account:")) {
                 int newAmount = Integer.parseInt(msg.substring(8));
                 app.updateBalance(newAmount, "Клиент 1");
@@ -87,12 +88,12 @@ class ClientThread2 extends Thread {
         try {
             Socket s = new Socket("127.0.0.1", 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
-            DataInputStream dis = new DataInputStream(s.getInputStream());
+            BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
             ps.println("WITHDRAW"); // команда: только снять
             ps.flush();
 
-            String msg = dis.readLine();
+            String msg = br.readLine();
             if (msg != null && msg.startsWith("Account:")) {
                 int newAmount = Integer.parseInt(msg.substring(8));
                 app.updateBalance(newAmount, "Клиент 2");
@@ -132,6 +133,16 @@ public class BankApp extends Frame {
 
         btn2 = new Button("Клиент 2 (только снять)");
         add(btn2);
+
+        btn1.addActionListener(e -> new ClientThread1(this).start());
+        btn2.addActionListener(e -> new ClientThread2(this).start());
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                System.exit(0);
+            }
+        });
     }
 
     // Обновляет текстовые поля после ответа сервера
@@ -140,28 +151,10 @@ public class BankApp extends Frame {
         logField.setText(clientName + " → баланс: " + newAmount);
     }
 
-    @Override
-    public boolean handleEvent(Event evt) {
-        if (evt.id == Event.WINDOW_DESTROY) {
-            System.exit(0);
-        }
-        return super.handleEvent(evt);
-    }
-
-    @Override
-    public boolean action(Event evt, Object arg) {
-        if (evt.target == btn1) {
-            new ClientThread1(this).start(); // запуск клиента 1
-        } else if (evt.target == btn2) {
-            new ClientThread2(this).start(); // запуск клиента 2
-        }
-        return true;
-    }
-
     public static void main(String[] args) {
         BankApp f = new BankApp();
-        f.resize(400, 220);
-        f.show();
+        f.setSize(400, 220);
+        f.setVisible(true);
         new AccountServer().start(); // запуск потока-сервера
     }
 }
