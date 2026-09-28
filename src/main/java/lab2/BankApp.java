@@ -1,0 +1,167 @@
+package lab2;
+
+import java.awt.*;
+import java.io.*;
+import java.net.*;
+
+// Поток-сервер: принимает соединения и обрабатывает команды клиентов
+class AccountServer extends Thread {
+    ServerSocket server;
+
+    public void run() {
+        try {
+            server = new ServerSocket(3001);
+        } catch (Exception e) {
+            System.out.println("Ошибка сервера: " + e);
+        }
+        while (true) {
+            Socket s = null;
+            try {
+                s = server.accept(); // ожидание подключения клиента
+                BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                PrintStream ps = new PrintStream(s.getOutputStream());
+
+                String command = br.readLine(); // читаем команду от клиента
+
+                int amountcur = (int) (Math.random() * 1000);
+
+                if ("ADD_WITHDRAW".equals(command)) {
+                    // Клиент 1: случайно добавляет или снимает
+                    if (Math.random() > 0.5)
+                        BankApp.amount -= amountcur;
+                    else
+                        BankApp.amount += amountcur;
+                } else if ("WITHDRAW".equals(command)) {
+                    // Клиент 2: только снимает
+                    BankApp.amount -= amountcur;
+                }
+
+                ps.println("Account:" + BankApp.amount); // отправляем новый баланс
+                ps.flush();
+                s.close();
+            } catch (Exception e) {
+                System.out.println("Ошибка обработки: " + e);
+            }
+        }
+    }
+}
+
+// Поток клиента 1: добавляет или снимает деньги со счёта
+class ClientThread1 extends Thread {
+    BankApp app;
+
+    public ClientThread1(BankApp app) {
+        this.app = app;
+    }
+
+    public void run() {
+        try {
+            Socket s = new Socket("127.0.0.1", 3001);
+            PrintStream ps = new PrintStream(s.getOutputStream());
+            DataInputStream dis = new DataInputStream(s.getInputStream());
+
+            ps.println("ADD_WITHDRAW"); // команда: добавить или снять
+            ps.flush();
+
+            String msg = dis.readLine();
+            if (msg != null && msg.startsWith("Account:")) {
+                int newAmount = Integer.parseInt(msg.substring(8));
+                app.updateBalance(newAmount, "Клиент 1");
+            }
+            s.close();
+        } catch (Exception e) {
+            System.out.println("Ошибка клиента 1: " + e);
+        }
+    }
+}
+
+// Поток клиента 2: только снимает деньги со счёта
+class ClientThread2 extends Thread {
+    BankApp app;
+
+    public ClientThread2(BankApp app) {
+        this.app = app;
+    }
+
+    public void run() {
+        try {
+            Socket s = new Socket("127.0.0.1", 3001);
+            PrintStream ps = new PrintStream(s.getOutputStream());
+            DataInputStream dis = new DataInputStream(s.getInputStream());
+
+            ps.println("WITHDRAW"); // команда: только снять
+            ps.flush();
+
+            String msg = dis.readLine();
+            if (msg != null && msg.startsWith("Account:")) {
+                int newAmount = Integer.parseInt(msg.substring(8));
+                app.updateBalance(newAmount, "Клиент 2");
+            }
+            s.close();
+        } catch (Exception e) {
+            System.out.println("Ошибка клиента 2: " + e);
+        }
+    }
+}
+
+public class BankApp extends Frame {
+
+    static int amount = 200; // общий счёт, разделяемый между клиентами
+
+    TextField balanceField;
+    TextField logField;
+    Button btn1;
+    Button btn2;
+
+    public BankApp() {
+        setTitle("Банковский счёт");
+        setLayout(new FlowLayout());
+
+        add(new Label("Текущий баланс:"));
+        balanceField = new TextField("Счёт: " + amount, 25);
+        balanceField.setEditable(false);
+        add(balanceField);
+
+        add(new Label("Последняя операция:"));
+        logField = new TextField("—", 25);
+        logField.setEditable(false);
+        add(logField);
+
+        btn1 = new Button("Клиент 1 (добавить / снять)");
+        add(btn1);
+
+        btn2 = new Button("Клиент 2 (только снять)");
+        add(btn2);
+    }
+
+    // Обновляет текстовые поля после ответа сервера
+    public synchronized void updateBalance(int newAmount, String clientName) {
+        balanceField.setText("Счёт: " + newAmount);
+        logField.setText(clientName + " → баланс: " + newAmount);
+    }
+
+    @Override
+    public boolean handleEvent(Event evt) {
+        if (evt.id == Event.WINDOW_DESTROY) {
+            System.exit(0);
+        }
+        return super.handleEvent(evt);
+    }
+
+    @Override
+    public boolean action(Event evt, Object arg) {
+        if (evt.target == btn1) {
+            new ClientThread1(this).start(); // запуск клиента 1
+        } else if (evt.target == btn2) {
+            new ClientThread2(this).start(); // запуск клиента 2
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        BankApp f = new BankApp();
+        f.resize(400, 220);
+        f.show();
+        new AccountServer().start(); // запуск потока-сервера
+    }
+}
