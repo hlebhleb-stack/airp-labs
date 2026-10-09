@@ -50,14 +50,16 @@ class AccountServer extends Thread {
 // Поток клиента 1: добавляет или снимает деньги со счёта
 class ClientThread1 extends Thread {
     BankApp app;
+    String serverAddr;
 
-    public ClientThread1(BankApp app) {
+    public ClientThread1(BankApp app, String serverAddr) {
         this.app = app;
+        this.serverAddr = serverAddr;
     }
 
     public void run() {
         try {
-            Socket s = new Socket("127.0.0.1", 3001);
+            Socket s = new Socket(serverAddr, 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
             BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
@@ -79,14 +81,16 @@ class ClientThread1 extends Thread {
 // Поток клиента 2: только снимает деньги со счёта
 class ClientThread2 extends Thread {
     BankApp app;
+    String serverAddr;
 
-    public ClientThread2(BankApp app) {
+    public ClientThread2(BankApp app, String serverAddr) {
         this.app = app;
+        this.serverAddr = serverAddr;
     }
 
     public void run() {
         try {
-            Socket s = new Socket("127.0.0.1", 3001);
+            Socket s = new Socket(serverAddr, 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
             BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
@@ -111,12 +115,17 @@ public class BankApp extends Frame {
 
     TextField balanceField;
     TextField logField;
+    TextField serverAddrField;
     Button btn1;
     Button btn2;
 
     public BankApp() {
         setTitle("Банковский счёт");
         setLayout(new FlowLayout());
+
+        add(new Label("Адрес сервера:"));
+        serverAddrField = new TextField("127.0.0.1", 20);
+        add(serverAddrField);
 
         add(new Label("Текущий баланс:"));
         balanceField = new TextField("Счёт: " + amount, 25);
@@ -134,8 +143,8 @@ public class BankApp extends Frame {
         btn2 = new Button("Клиент 2 (только снять)");
         add(btn2);
 
-        btn1.addActionListener(e -> new ClientThread1(this).start());
-        btn2.addActionListener(e -> new ClientThread2(this).start());
+        btn1.addActionListener(e -> new ClientThread1(this, serverAddrField.getText().trim()).start());
+        btn2.addActionListener(e -> new ClientThread2(this, serverAddrField.getText().trim()).start());
 
         addWindowListener(new WindowAdapter() {
             @Override
