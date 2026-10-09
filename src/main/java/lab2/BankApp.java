@@ -50,16 +50,14 @@ class AccountServer extends Thread {
 // Поток клиента 1: добавляет или снимает деньги со счёта
 class ClientThread1 extends Thread {
     BankApp app;
-    String serverAddr;
 
-    public ClientThread1(BankApp app, String serverAddr) {
+    public ClientThread1(BankApp app) {
         this.app = app;
-        this.serverAddr = serverAddr;
     }
 
     public void run() {
         try {
-            Socket s = new Socket(serverAddr, 3001);
+            Socket s = new Socket("172.20.10.3", 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
             BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
@@ -81,16 +79,14 @@ class ClientThread1 extends Thread {
 // Поток клиента 2: только снимает деньги со счёта
 class ClientThread2 extends Thread {
     BankApp app;
-    String serverAddr;
 
-    public ClientThread2(BankApp app, String serverAddr) {
+    public ClientThread2(BankApp app) {
         this.app = app;
-        this.serverAddr = serverAddr;
     }
 
     public void run() {
         try {
-            Socket s = new Socket(serverAddr, 3001);
+            Socket s = new Socket("172.20.10.3", 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
             BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
@@ -117,10 +113,8 @@ public class BankApp extends Frame {
     TextField logField;
     Button btn1;
     Button btn2;
-    String serverAddr;
 
-    public BankApp(String serverAddr) {
-        this.serverAddr = serverAddr;
+    public BankApp() {
         setTitle("Банковский счёт");
         setLayout(new FlowLayout());
 
@@ -140,8 +134,8 @@ public class BankApp extends Frame {
         btn2 = new Button("Клиент 2 (только снять)");
         add(btn2);
 
-        btn1.addActionListener(e -> new ClientThread1(this, serverAddr).start());
-        btn2.addActionListener(e -> new ClientThread2(this, serverAddr).start());
+        btn1.addActionListener(e -> new ClientThread1(this).start());
+        btn2.addActionListener(e -> new ClientThread2(this).start());
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -158,8 +152,7 @@ public class BankApp extends Frame {
     }
 
     public static void main(String[] args) {
-        String serverAddr = args.length > 0 ? args[0] : "127.0.0.1";
-        BankApp f = new BankApp(serverAddr);
+        BankApp f = new BankApp();
         f.setSize(400, 220);
         f.setVisible(true);
         new AccountServer().start(); // запуск потока-сервера
