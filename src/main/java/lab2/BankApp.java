@@ -115,17 +115,14 @@ public class BankApp extends Frame {
 
     TextField balanceField;
     TextField logField;
-    TextField serverAddrField;
     Button btn1;
     Button btn2;
+    String serverAddr;
 
-    public BankApp() {
+    public BankApp(String serverAddr) {
+        this.serverAddr = serverAddr;
         setTitle("Банковский счёт");
         setLayout(new FlowLayout());
-
-        add(new Label("Адрес сервера:"));
-        serverAddrField = new TextField("127.0.0.1", 20);
-        add(serverAddrField);
 
         add(new Label("Текущий баланс:"));
         balanceField = new TextField("Счёт: " + amount, 25);
@@ -143,8 +140,8 @@ public class BankApp extends Frame {
         btn2 = new Button("Клиент 2 (только снять)");
         add(btn2);
 
-        btn1.addActionListener(e -> new ClientThread1(this, serverAddrField.getText().trim()).start());
-        btn2.addActionListener(e -> new ClientThread2(this, serverAddrField.getText().trim()).start());
+        btn1.addActionListener(e -> new ClientThread1(this, serverAddr).start());
+        btn2.addActionListener(e -> new ClientThread2(this, serverAddr).start());
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -161,7 +158,8 @@ public class BankApp extends Frame {
     }
 
     public static void main(String[] args) {
-        BankApp f = new BankApp();
+        String serverAddr = args.length > 0 ? args[0] : "127.0.0.1";
+        BankApp f = new BankApp(serverAddr);
         f.setSize(400, 220);
         f.setVisible(true);
         new AccountServer().start(); // запуск потока-сервера
