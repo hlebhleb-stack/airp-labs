@@ -3,6 +3,7 @@ package lab3.client;
 import java.awt.Desktop;
 import java.io.*;
 import java.net.*;
+import java.net.URI;
 import java.nio.file.*;
 
 /**
@@ -16,7 +17,7 @@ public class WordClient {
     public static void main(String[] args) throws Exception {
         System.out.println("Подключение к сервлету: " + SERVLET_URL);
 
-        URL url = new URL(SERVLET_URL);
+        URL url = new URI(SERVLET_URL).toURL();
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         conn.connect();
