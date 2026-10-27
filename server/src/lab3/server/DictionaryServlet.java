@@ -4,54 +4,75 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.*;
 import java.net.URLDecoder;
+import java.sql.*;
 import java.util.*;
 
 /**
  * Общее задание: сервлет-словарь с прямым (RU→EN) и обратным (EN→RU) переводом.
- *
- * Аналог HttpServlet с doGet/doPost → processRequest.
- * Обрабатывает форму dictionary.html: поля txt (RU) и trans (EN).
- * Возвращает HTML-страницу с заполненными полями перевода.
+ * База данных: SQLite (файл dictionary.db рядом со скриптом запуска).
  */
 public class DictionaryServlet implements HttpHandler {
 
-    // "База данных" — словарь переводов
-    private static final Map<String, String> RU_TO_EN = new LinkedHashMap<>();
-    private static final Map<String, String> EN_TO_RU = new LinkedHashMap<>();
+    private static final String DB_URL = "jdbc:sqlite:dictionary.db";
 
+    // Инициализация БД при загрузке класса
     static {
-        String[][] pairs = {
-            {"привет",      "hello"},
-            {"мир",         "world"},
-            {"кот",         "cat"},
-            {"собака",      "dog"},
-            {"дом",         "house"},
-            {"книга",       "book"},
-            {"стол",        "table"},
-            {"окно",        "window"},
-            {"вода",        "water"},
-            {"огонь",       "fire"},
-            {"солнце",      "sun"},
-            {"луна",        "moon"},
-            {"дерево",      "tree"},
-            {"дорога",      "road"},
-            {"город",       "city"},
-            {"школа",       "school"},
-            {"компьютер",   "computer"},
-            {"программа",   "program"},
-            {"студент",     "student"},
-            {"университет", "university"},
-        };
-        for (String[] pair : pairs) {
-            RU_TO_EN.put(pair[0].toLowerCase(), pair[1]);
-            EN_TO_RU.put(pair[1].toLowerCase(), pair[0]);
+        try {
+            Class.forName("org.sqlite.JDBC");
+            try (Connection conn = DriverManager.getConnection(DB_URL);
+                 Statement stmt = conn.createStatement()) {
+
+                stmt.execute(
+                    "CREATE TABLE IF NOT EXISTS words (" +
+                    "  ru TEXT PRIMARY KEY," +
+                    "  en TEXT NOT NULL" +
+                    ")"
+                );
+
+                // Заполняем только если таблица пустая
+                ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM words");
+                if (rs.next() && rs.getInt(1) == 0) {
+                    String[][] pairs = {
+                        {"привет",      "hello"},
+                        {"мир",         "world"},
+                        {"кот",         "cat"},
+                        {"собака",      "dog"},
+                        {"дом",         "house"},
+                        {"книга",       "book"},
+                        {"стол",        "table"},
+                        {"окно",        "window"},
+                        {"вода",        "water"},
+                        {"огонь",       "fire"},
+                        {"солнце",      "sun"},
+                        {"луна",        "moon"},
+                        {"дерево",      "tree"},
+                        {"дорога",      "road"},
+                        {"город",       "city"},
+                        {"школа",       "school"},
+                        {"компьютер",   "computer"},
+                        {"программа",   "program"},
+                        {"студент",     "student"},
+                        {"университет", "university"},
+                    };
+                    PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO words(ru, en) VALUES(?, ?)"
+                    );
+                    for (String[] pair : pairs) {
+                        ps.setString(1, pair[0]);
+                        ps.setString(2, pair[1]);
+                        ps.executeUpdate();
+                    }
+                    System.out.println("[DictionaryServlet] БД заполнена: " + pairs.length + " слов.");
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка инициализации БД: " + e.getMessage(), e);
         }
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         String method = exchange.getRequestMethod();
-        // doGet и doPost — оба направляются в processRequest
         if ("GET".equalsIgnoreCase(method)) {
             doGet(exchange);
         } else if ("POST".equalsIgnoreCase(method)) {
@@ -67,13 +88,11 @@ public class DictionaryServlet implements HttpHandler {
     }
 
     private void doPost(HttpExchange exchange) throws IOException {
-        // При POST тело содержит параметры
         String query = new String(exchange.getRequestBody().readAllBytes(), "UTF-8");
         processRequest(exchange, query);
     }
 
     private void processRequest(HttpExchange exchange, String query) throws IOException {
-        // Правильный разбор параметров: "txt=кот&trans=+cat" → Map
         Map<String, String> params = parseQuery(query);
 
         String txt   = params.getOrDefault("txt",   "").trim();
@@ -82,23 +101,34 @@ public class DictionaryServlet implements HttpHandler {
         String resultTxt   = txt;
         String resultTrans = trans;
 
-        // Если заполнено поле txt → прямой перевод RU→EN
-        if (!txt.isEmpty()) {
-            String found = RU_TO_EN.get(txt.toLowerCase());
-            resultTrans = (found != null) ? found : "Слово не найдено";
-            resultTxt   = txt;
-        }
-        // Если заполнено поле trans → обратный перевод EN→RU
-        else if (!trans.isEmpty()) {
-            String found = EN_TO_RU.get(trans.toLowerCase());
-            resultTxt   = (found != null) ? found : "Word not found";
-            resultTrans = trans;
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            if (!txt.isEmpty()) {
+                // Прямой перевод RU→EN
+                PreparedStatement ps = conn.prepareStatement(
+                    "SELECT en FROM words WHERE LOWER(ru) = LOWER(?)"
+                );
+                ps.setString(1, txt);
+                ResultSet rs = ps.executeQuery();
+                resultTrans = rs.next() ? rs.getString("en") : "Слово не найдено";
+                resultTxt   = txt;
+
+            } else if (!trans.isEmpty()) {
+                // Обратный перевод EN→RU
+                PreparedStatement ps = conn.prepareStatement(
+                    "SELECT ru FROM words WHERE LOWER(en) = LOWER(?)"
+                );
+                ps.setString(1, trans);
+                ResultSet rs = ps.executeQuery();
+                resultTxt   = rs.next() ? rs.getString("ru") : "Word not found";
+                resultTrans = trans;
+            }
+        } catch (SQLException e) {
+            resultTrans = "Ошибка БД: " + e.getMessage();
         }
 
         System.out.println("[DictionaryServlet] txt='" + txt + "' trans='" + trans
                 + "' → txtResult='" + resultTxt + "' transResult='" + resultTrans + "'");
 
-        // Ответ — HTML-страница с заполненными полями (как в методичке)
         String responseHtml =
             "<html>\n" +
             "<head><title>Servlet DictionaryServlet</title>\n" +
@@ -125,7 +155,6 @@ public class DictionaryServlet implements HttpHandler {
         }
     }
 
-    /** Разбирает строку вида "key1=val1&key2=val2" в Map. */
     private static Map<String, String> parseQuery(String query) throws UnsupportedEncodingException {
         Map<String, String> result = new HashMap<>();
         if (query == null || query.isEmpty()) return result;
