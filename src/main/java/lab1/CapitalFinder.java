@@ -3,6 +3,7 @@ package lab1;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 
 import javafx.application.Platform;
@@ -179,23 +180,8 @@ public class CapitalFinder extends Frame implements ActionListener {
     private void openInBrowser(String title, String content) {
         try {
             File htmlFile = File.createTempFile("lab1", ".html");
-            htmlFile.deleteOnExit();
-            try (Writer writer = new OutputStreamWriter(new FileOutputStream(htmlFile), "UTF-8")) {
-                writer.write("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
-                        + "<title>" + title + "</title></head><body><pre>"
-                        + content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                        + "</pre></body></html>");
-            }
-
-            String os = System.getProperty("os.name", "").toLowerCase();
-            String path = htmlFile.getAbsolutePath();
-            if (os.contains("mac")) {
-                new ProcessBuilder("open", "-a", "Safari", path).start();
-            } else if (os.contains("win")) {
-                new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", path).start();
-            } else {
-                new ProcessBuilder("xdg-open", path).start();
-            }
+            Files.writeString(htmlFile.toPath(), "<title>" + title + "</title><pre>" + content + "</pre>");
+            Desktop.getDesktop().browse(htmlFile.toURI());
         } catch (IOException e) {
             resultArea.append("\nНе удалось открыть файл в браузере: " + e.getMessage());
         }
