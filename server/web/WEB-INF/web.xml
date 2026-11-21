@@ -25,6 +25,16 @@
         <url-pattern>/WordServlet</url-pattern>
     </servlet-mapping>
 
+    <!-- Дополнительное задание: табло вылетов -->
+    <servlet>
+        <servlet-name>FlightServlet</servlet-name>
+        <servlet-class>lab3.server.FlightServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>FlightServlet</servlet-name>
+        <url-pattern>/FlightServlet</url-pattern>
+    </servlet-mapping>
+
     <!-- Стартовая страница приложения -->
     <welcome-file-list>
         <welcome-file>dictionary.html</welcome-file>

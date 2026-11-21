@@ -13,6 +13,7 @@ public class WordServer {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/WordServlet",       new WordServlet());
         server.createContext("/DictionaryServlet", new DictionaryServlet());
+        server.createContext("/FlightServlet", new FlightServlet());
         // Стартовая страница — dictionary.html (welcome-file, как в web.xml)
         server.createContext("/", new StaticFileHandler("web"));
         server.start();
@@ -20,6 +21,7 @@ public class WordServer {
         System.out.println("  http://localhost:" + port + "/dictionary.html — форма словаря");
         System.out.println("  http://localhost:" + port + "/DictionaryServlet — сервлет словаря");
         System.out.println("  http://localhost:" + port + "/WordServlet       — документ Word");
+        System.out.println("  http://localhost:" + port + "/flights.html      — вылеты из Берлина");
     }
 
     /** Отдаёт статические файлы из папки webRoot относительно рабочей директории. */
