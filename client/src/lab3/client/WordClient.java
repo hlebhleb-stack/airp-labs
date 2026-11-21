@@ -12,7 +12,7 @@ import java.nio.file.*;
  */
 public class WordClient {
 
-    private static final String SERVLET_URL = "http://localhost:8080/WordServlet";
+    private static final String SERVLET_URL = System.getProperty("lab3.baseUrl", "http://localhost:8080/airp-lab3") + "/WordServlet";
 
     public static void main(String[] args) throws Exception {
         System.out.println("Подключение к сервлету: " + SERVLET_URL);

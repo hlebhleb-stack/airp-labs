@@ -13,7 +13,7 @@ import java.util.regex.*;
  */
 public class DictionaryClient extends JFrame {
 
-    private static final String SERVLET_URL = "http://localhost:8080/DictionaryServlet";
+    private static final String SERVLET_URL = System.getProperty("lab3.baseUrl", "http://localhost:8080/airp-lab3") + "/DictionaryServlet";
 
     private final JTextField txtRu    = new JTextField(20);
     private final JTextField txtEn    = new JTextField(20);

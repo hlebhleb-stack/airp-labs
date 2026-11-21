@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutionException;
 
 /** Java-клиент получает HTML от FlightServlet и сохраняет таблицу рейсов. */
 public class FlightClient {
-    private static final String SERVLET_URL = "http://localhost:8080/FlightServlet";
+    private static final String SERVLET_URL = System.getProperty("lab3.baseUrl", "http://localhost:8080/airp-lab3") + "/FlightServlet";
     private static final Path OUTPUT = Path.of("ber-flights.html");
 
     private record Period(String label, String value) {

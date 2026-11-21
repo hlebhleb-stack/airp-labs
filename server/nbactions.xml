@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+    <action>
+        <actionName>run</actionName>
+        <packagings><packaging>war</packaging></packagings>
+        <goals>
+            <goal>package</goal>
+            <goal>org.codehaus.mojo:exec-maven-plugin:3.5.0:exec</goal>
+        </goals>
+        <properties>
+            <exec.executable>bash</exec.executable>
+            <exec.args>compile_run.sh --run-built</exec.args>
+        </properties>
+    </action>
+</actions>

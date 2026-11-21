@@ -1,7 +1,8 @@
 package lab3.server;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.util.zip.*;
 
@@ -11,19 +12,19 @@ import java.util.zip.*;
  *
  * .docx — это ZIP-архив с XML-файлами. Создаётся в памяти без внешних библиотек.
  */
-public class WordServlet implements HttpHandler {
+public class WordServlet extends HttpServlet {
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         byte[] docx = buildDocx();
 
-        exchange.getResponseHeaders().set("Content-Type",
+        response.setContentType(
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-        exchange.getResponseHeaders().set("Content-Disposition",
+        response.setHeader("Content-Disposition",
                 "attachment; filename=\"document.docx\"");
-        exchange.sendResponseHeaders(200, docx.length);
+        response.setContentLength(docx.length);
 
-        try (OutputStream os = exchange.getResponseBody()) {
+        try (OutputStream os = response.getOutputStream()) {
             os.write(docx);
         }
 
@@ -110,7 +111,7 @@ public class WordServlet implements HttpHandler {
                "    <w:p><w:r><w:t></w:t></w:r></w:p>\n" +
                "    <w:p>\n" +
                "      <w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Сервер: </w:t></w:r>\n" +
-               "      <w:r><w:t>Java HttpServer (com.sun.net.httpserver)</w:t></w:r>\n" +
+               "      <w:r><w:t>Apache Tomcat / Java Servlet</w:t></w:r>\n" +
                "    </w:p>\n" +
                "    <w:p>\n" +
                "      <w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Клиент: </w:t></w:r>\n" +

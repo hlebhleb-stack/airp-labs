@@ -1,19 +1,22 @@
 package lab3.server;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.net.URLDecoder;
+import java.nio.file.Path;
 import java.sql.*;
-import java.util.*;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Общее задание: сервлет-словарь с прямым (RU→EN) и обратным (EN→RU) переводом.
- * База данных: SQLite (файл dictionary.db рядом со скриптом запуска).
+ * База данных: SQLite (файл dictionary.db в каталоге Tomcat или по пути lab3.dictionary.path).
  */
-public class DictionaryServlet implements HttpHandler {
+public class DictionaryServlet extends HttpServlet {
 
-    private static final String DB_URL = "jdbc:sqlite:dictionary.db";
+    private static final String DB_URL = "jdbc:sqlite:" + System.getProperty(
+            "lab3.dictionary.path", Path.of(System.getProperty("catalina.base", "."), "dictionary.db").toString());
 
     // Инициализация БД при загрузке класса
     static {
@@ -71,32 +74,19 @@ public class DictionaryServlet implements HttpHandler {
     }
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
-        String method = exchange.getRequestMethod();
-        if ("GET".equalsIgnoreCase(method)) {
-            doGet(exchange);
-        } else if ("POST".equalsIgnoreCase(method)) {
-            doPost(exchange);
-        } else {
-            exchange.sendResponseHeaders(405, -1);
-        }
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        processRequest(request, response);
     }
 
-    private void doGet(HttpExchange exchange) throws IOException {
-        String query = exchange.getRequestURI().getQuery();
-        processRequest(exchange, query);
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        processRequest(request, response);
     }
 
-    private void doPost(HttpExchange exchange) throws IOException {
-        String query = new String(exchange.getRequestBody().readAllBytes(), "UTF-8");
-        processRequest(exchange, query);
-    }
-
-    private void processRequest(HttpExchange exchange, String query) throws IOException {
-        Map<String, String> params = parseQuery(query);
-
-        String txt   = params.getOrDefault("txt",   "").trim();
-        String trans = params.getOrDefault("trans", "").trim();
+    private void processRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        request.setCharacterEncoding("UTF-8");
+        String txt = Objects.toString(request.getParameter("txt"), "").trim();
+        String trans = Objects.toString(request.getParameter("trans"), "").trim();
 
         String resultTxt   = txt;
         String resultTrans = trans;
@@ -107,7 +97,7 @@ public class DictionaryServlet implements HttpHandler {
                 PreparedStatement ps = conn.prepareStatement(
                     "SELECT en FROM words WHERE LOWER(ru) = LOWER(?)"
                 );
-                ps.setString(1, txt);
+                ps.setString(1, txt.toLowerCase(Locale.ROOT));
                 ResultSet rs = ps.executeQuery();
                 resultTrans = rs.next() ? rs.getString("en") : "Слово не найдено";
                 resultTxt   = txt;
@@ -147,26 +137,8 @@ public class DictionaryServlet implements HttpHandler {
             "</body>\n" +
             "</html>";
 
-        byte[] bytes = responseHtml.getBytes("UTF-8");
-        exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
-        exchange.sendResponseHeaders(200, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
-    }
-
-    private static Map<String, String> parseQuery(String query) throws UnsupportedEncodingException {
-        Map<String, String> result = new HashMap<>();
-        if (query == null || query.isEmpty()) return result;
-        for (String pair : query.split("&")) {
-            int idx = pair.indexOf('=');
-            if (idx > 0) {
-                String key = URLDecoder.decode(pair.substring(0, idx), "UTF-8");
-                String val = URLDecoder.decode(pair.substring(idx + 1), "UTF-8").trim();
-                result.put(key, val);
-            }
-        }
-        return result;
+        response.setContentType("text/html; charset=UTF-8");
+        response.getWriter().print(responseHtml);
     }
 
     private static String htmlEscape(String s) {
