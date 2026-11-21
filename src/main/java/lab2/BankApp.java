@@ -57,7 +57,7 @@ class ClientThread1 extends Thread {
 
     public void run() {
         try {
-            Socket s = new Socket("172.20.10.3", 3001);
+            Socket s = new Socket("127.0.0.1", 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
             BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
@@ -86,7 +86,7 @@ class ClientThread2 extends Thread {
 
     public void run() {
         try {
-            Socket s = new Socket("172.20.10.3", 3001);
+            Socket s = new Socket("127.0.0.1", 3001);
             PrintStream ps = new PrintStream(s.getOutputStream());
             BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
